@@ -1,4 +1,4 @@
-use thiserror::Error;
+use thiserror_no_std::Error;
 
 pub type Result<T> = std::result::Result<T, SoilMoistureSensorError>;
 
