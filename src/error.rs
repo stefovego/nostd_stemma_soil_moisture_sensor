@@ -1,8 +1,7 @@
 use thiserror_no_std::Error;
+pub type Result<T> = core::result::Result<T, SoilMoistureSensorError>;
 
-pub type Result<T> = std::result::Result<T, SoilMoistureSensorError>;
-
-#[derive(Error, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Error, Debug) ]
 pub enum SoilMoistureSensorError {
     #[error("Write Read I2C Error")]
     WriteReadI2CError,

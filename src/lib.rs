@@ -1,9 +1,10 @@
+#![no_std]
 use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::blocking::i2c;
 
 pub mod error;
 use crate::error::SoilMoistureSensorError;
-use error::Result;
+use core::result::Result;
 
 pub mod prelude {
     pub use crate::error::SoilMoistureSensorError;
@@ -13,6 +14,7 @@ pub mod prelude {
 const TEMP_C_CONSTANT: f32 = 0.000015258789;
 const TEMP_F_CONSTANT: f32 = 0.000027466; // TEMP_C_CONSTANT * 1.8
 const TEMP_F_CONSTANT_SUM: f32 = 32.0;
+
 
 /// Influences what the reading temperature numbers are
 #[derive(Default, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
@@ -83,9 +85,9 @@ where
 impl<I2C, D> SoilSensor<I2C, D>
 where
     I2C: i2c::Write + i2c::Read + Send + Sync,
-    D: DelayUs<u16>,
+    D: DelayUs<u16> + core::convert::From<error::SoilMoistureSensorError>,
 {
-    pub fn temperature(&mut self) -> Result<f32> {
+    pub fn temperature(&mut self) -> Result<f32, D> {
         let mut buffer = [0; 4];
         self.i2c_read(&[0x00, 0x04], &mut buffer, self.temp_delay)?;
         let raw = i32::from_be_bytes(buffer) as f32;
@@ -95,19 +97,19 @@ where
         })
     }
 
-    pub fn moisture(&mut self) -> Result<u16> {
+    pub fn moisture(&mut self) -> Result<u16, D> {
         let mut buffer = [0; 2];
         self.i2c_read(&[0x0F, 0x10], &mut buffer, self.moisture_delay)?;
         Ok(u16::from_be_bytes(buffer))
     }
 
-    fn i2c_read(&mut self, bytes: &[u8], buffer: &mut [u8], delay: u16) -> Result<()> {
+    fn i2c_read(&mut self, bytes: &[u8], buffer: &mut [u8], delay: u16) -> Result<(), D> {
         self.i2c
             .write(self.address, bytes)
             .map_err(|_| SoilMoistureSensorError::WriteI2CError)?;
         self.delay.delay_us(delay);
-        self.i2c
+        Ok(self.i2c
             .read(self.address, buffer)
-            .map_err(|_| SoilMoistureSensorError::ReadI2CError)
+            .map_err(|_| SoilMoistureSensorError::ReadI2CError)?)
     }
 }
